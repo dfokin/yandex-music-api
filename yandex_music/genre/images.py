@@ -21,7 +21,7 @@ class Images(YandexMusicObject):
     _300x300: Optional[str] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self._208x208, self._300x300)
 
     def download_208x208(self, filename: str) -> None:
@@ -40,6 +40,22 @@ class Images(YandexMusicObject):
         """
         self.client.request.download(self._300x300, filename)
 
+    def download_208x208_bytes(self) -> bytes:
+        """Загрузка изображения 208x208 и возврат в виде байтов.
+
+        Returns:
+            :obj:`bytes`: Изображение в виде байтов.
+        """
+        return self.client.request.retrieve(self._208x208)
+
+    def download_300x300_bytes(self) -> bytes:
+        """Загрузка изображения 300x300 и возврат в виде байтов.
+
+        Returns:
+            :obj:`bytes`: Изображение в виде байтов.
+        """
+        return self.client.request.retrieve(self._300x300)
+
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Images']:
         """Десериализация объекта.
@@ -51,9 +67,20 @@ class Images(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Images`: Изображение жанра.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Images, cls).de_json(data, client)
 
         return cls(client=client, **data)
+
+    # camelCase псевдонимы
+
+    #: Псевдоним для :attr:`download_208x208`
+    download208X208 = download_208x208
+    #: Псевдоним для :attr:`download_300x300`
+    download300X300 = download_300x300
+    #: Псевдоним для :attr:`download_208x208_bytes`
+    download208X208Bytes = download_208x208_bytes
+    #: Псевдоним для :attr:`download_300x300_bytes`
+    download300X300Bytes = download_300x300_bytes

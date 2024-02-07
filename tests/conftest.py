@@ -1,16 +1,20 @@
 import pytest
 
 from yandex_music import (
+    R128,
     Account,
     AdParams,
     Album,
     AlbumEvent,
+    Alert,
+    AlertButton,
     Artist,
     ArtistEvent,
     AutoRenewable,
     Best,
     Block,
     BlockEntity,
+    Brand,
     CaseForms,
     Chart,
     ChartInfo,
@@ -18,9 +22,14 @@ from yandex_music import (
     ChartInfoMenuItem,
     ChartItem,
     Client,
+    Contest,
+    Context,
     Counts,
     Cover,
+    CustomWave,
     Day,
+    Deactivation,
+    Deprecation,
     Description,
     DiscreteScale,
     Enum,
@@ -34,11 +43,16 @@ from yandex_music import (
     LicenceTextPart,
     Link,
     Lyrics,
+    LyricsInfo,
+    LyricsMajor,
     MadeFor,
     Major,
     MetaData,
     MixLink,
+    NonAutoRenewable,
     Normalization,
+    OpenGraphData,
+    Operator,
     Pager,
     PassportPhone,
     Permissions,
@@ -50,6 +64,7 @@ from yandex_music import (
     PlaylistAbsence,
     PlaylistId,
     Plus,
+    PoetryLoverMatch,
     Price,
     Product,
     Promotion,
@@ -64,6 +79,7 @@ from yandex_music import (
     ShotData,
     ShotType,
     Station,
+    StationData,
     StationResult,
     Status,
     Subscription,
@@ -71,6 +87,7 @@ from yandex_music import (
     Title,
     Track,
     TrackId,
+    TrackLyrics,
     TrackPosition,
     TrackShort,
     TrackShortOld,
@@ -80,35 +97,33 @@ from yandex_music import (
     Video,
     VideoSupplement,
     Vinyl,
-    StationData,
-    AlertButton,
-    Alert,
-    NonAutoRenewable,
-    PoetryLoverMatch,
-    Deactivation,
-    Operator,
-    Contest,
-    OpenGraphData,
-    Brand,
-    Context,
-    Deprecation,
 )
+
 from . import (
     TestAccount,
     TestAdParams,
     TestAlbum,
+    TestAlert,
+    TestAlertButton,
     TestArtist,
+    TestArtistEvent,
     TestAutoRenewable,
     TestBest,
     TestBlock,
     TestBlockEntity,
+    TestBrand,
     TestCaseForms,
     TestChart,
     TestChartInfo,
     TestChartInfoMenuItem,
+    TestContest,
+    TestContext,
     TestCounts,
     TestCover,
+    TestCustomWave,
     TestDay,
+    TestDeactivation,
+    TestDeprecation,
     TestDescription,
     TestDiscreteScale,
     TestEnum,
@@ -122,10 +137,15 @@ from . import (
     TestLicenceTextPart,
     TestLink,
     TestLyrics,
+    TestLyricsInfo,
+    TestLyricsMajor,
     TestMajor,
     TestMetaData,
     TestMixLink,
+    TestNonAutoRenewable,
     TestNormalization,
+    TestOpenGraphData,
+    TestOperator,
     TestPager,
     TestPassportPhone,
     TestPermissions,
@@ -136,9 +156,11 @@ from . import (
     TestPlaylistAbsence,
     TestPlaylistId,
     TestPlus,
+    TestPoetryLoverMatch,
     TestPrice,
     TestProduct,
     TestPromotion,
+    TestR128,
     TestRatings,
     TestRenewableRemainder,
     TestRotorSettings,
@@ -149,6 +171,7 @@ from . import (
     TestShotData,
     TestShotType,
     TestStation,
+    TestStationData,
     TestStationResult,
     TestStatus,
     TestSubscription,
@@ -156,6 +179,7 @@ from . import (
     TestTitle,
     TestTrack,
     TestTrackId,
+    TestTrackLyrics,
     TestTrackPosition,
     TestTrackShort,
     TestTrackShortOld,
@@ -165,19 +189,6 @@ from . import (
     TestVideo,
     TestVideoSupplement,
     TestVinyl,
-    TestArtistEvent,
-    TestStationData,
-    TestAlertButton,
-    TestAlert,
-    TestNonAutoRenewable,
-    TestPoetryLoverMatch,
-    TestDeactivation,
-    TestOperator,
-    TestContest,
-    TestOpenGraphData,
-    TestBrand,
-    TestContext,
-    TestDeprecation,
 )
 
 
@@ -242,7 +253,7 @@ def artist_decomposed(artist_without_nested_artist):
 
 
 @pytest.fixture(scope='session')
-def track_factory(major, normalization, user, meta_data, poetry_lover_match):
+def track_factory(major, normalization, user, meta_data, poetry_lover_match, r_128, lyrics_info):
     class TrackFactory:
         def get(self, artists, albums, track_without_nested_tracks=None):
             return Track(
@@ -284,6 +295,11 @@ def track_factory(major, normalization, user, meta_data, poetry_lover_match):
                 TestTrack.background_video_uri,
                 TestTrack.short_description,
                 TestTrack.is_suitable_for_children,
+                TestTrack.track_source,
+                TestTrack.available_for_options,
+                r_128,
+                lyrics_info,
+                TestTrack.track_sharing_flag,
             )
 
     return TrackFactory()
@@ -312,6 +328,26 @@ def track_without_artists_and_albums(track_factory):
 @pytest.fixture(scope='session')
 def track_without_nested_tracks(artist, album, track_factory):
     return track_factory.get([artist], [album])
+
+
+@pytest.fixture(scope='session')
+def lyrics_major():
+    return LyricsMajor(
+        TestLyricsMajor.id,
+        TestLyricsMajor.name,
+        TestLyricsMajor.pretty_name,
+    )
+
+
+@pytest.fixture(scope='session')
+def track_lyrics(lyrics_major):
+    return TrackLyrics(
+        TestTrackLyrics.download_url,
+        TestTrackLyrics.lyric_id,
+        TestTrackLyrics.external_lyric_id,
+        TestTrackLyrics.writer,
+        lyrics_major,
+    )
 
 
 @pytest.fixture(scope='session')
@@ -364,6 +400,7 @@ def album_factory(label, track_position):
                 TestAlbum.likes_count,
                 deprecation,
                 TestAlbum.available_regions,
+                TestAlbum.available_for_options,
             )
 
     return AlbumFactory()
@@ -399,6 +436,8 @@ def playlist_factory(
     contest,
     open_graph_data,
     brand,
+    custom_wave,
+    pager,
 ):
     class PlaylistFactory:
         def get(self, similar_playlists, last_owner_playlists):
@@ -458,6 +497,8 @@ def playlist_factory(
                 TestPlaylist.ready,
                 TestPlaylist.is_for_from,
                 TestPlaylist.regions,
+                custom_wave,
+                pager,
             )
 
     return PlaylistFactory()
@@ -481,6 +522,7 @@ def generated_playlist(playlist):
         TestGeneratedPlaylist.notify,
         playlist,
         TestGeneratedPlaylist.description,
+        TestGeneratedPlaylist.preview_description,
     )
 
 
@@ -702,11 +744,6 @@ def playlist_absence():
 
 
 @pytest.fixture(scope='session')
-def results(playlist):
-    return [playlist]
-
-
-@pytest.fixture(scope='session')
 def context():
     return Context(TestContext.type_, TestContext.id_, TestContext.description)
 
@@ -860,6 +897,7 @@ def account(passport_phone):
         [passport_phone],
         TestAccount.registered_at,
         TestAccount.has_info_for_app_metrica,
+        TestAccount.child,
     )
 
 
@@ -879,6 +917,7 @@ def subscription(renewable_remainder, auto_renewable, operator, non_auto_renewab
         renewable_remainder,
         [auto_renewable],
         [auto_renewable],
+        TestSubscription.had_any_subscription,
         [operator],
         non_auto_renewable,
         TestSubscription.can_start_trial,
@@ -925,13 +964,13 @@ def product(price, licence_text_part):
     return Product(
         TestProduct.product_id,
         TestProduct.type,
-        TestProduct.common_period_duration,
         TestProduct.duration,
         TestProduct.trial_duration,
-        price,
         TestProduct.feature,
         TestProduct.debug,
         TestProduct.plus,
+        price,
+        TestProduct.common_period_duration,
         TestProduct.cheapest,
         TestProduct.title,
         TestProduct.family_sub,
@@ -998,6 +1037,8 @@ def status(account, permissions, subscription, plus, station_data, alert):
         alert,
         TestStatus.premium_region,
         TestStatus.experiment,
+        TestStatus.pretrial_active,
+        TestStatus.userhash,
     )
 
 
@@ -1131,7 +1172,15 @@ def chart_item(track, chart):
 @pytest.fixture(scope='session')
 def station_result(station, rotor_settings, ad_params):
     return StationResult(
-        station, rotor_settings, rotor_settings, ad_params, TestStationResult.explanation, TestStationResult.prerolls
+        station,
+        rotor_settings,
+        rotor_settings,
+        ad_params,
+        TestStationResult.explanation,
+        TestStationResult.prerolls,
+        TestStationResult.rup_title,
+        TestStationResult.rup_description,
+        TestStationResult.custom_name,
     )
 
 
@@ -1262,3 +1311,18 @@ def search_result_with_results_and_type(request, types, results):
         [results[request.param]],
         types[request.param],
     )
+
+
+@pytest.fixture(scope='session')
+def custom_wave():
+    return CustomWave(TestCustomWave.title, TestCustomWave.animation_url, TestCustomWave.position)
+
+
+@pytest.fixture(scope='session')
+def r_128():
+    return R128(TestR128.i, TestR128.tp)
+
+
+@pytest.fixture(scope='session')
+def lyrics_info():
+    return LyricsInfo(TestLyricsInfo.has_available_sync_lyrics, TestLyricsInfo.has_available_text_lyrics)

@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, Optional
 
-
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
@@ -10,7 +9,7 @@ if TYPE_CHECKING:
 
 @model
 class Experiments(YandexMusicObject):
-    """Класс, представляющий какие-то свистелки-перделки, флажки, режимы экспериментальных функций.
+    """Класс, представляющий какие-то свистелки и перделки, флажки, режимы экспериментальных функций.
 
     Attributes:
         client (:obj:`yandex_music.Client`): Клиент Yandex Music.
@@ -21,7 +20,7 @@ class Experiments(YandexMusicObject):
         **kwargs: Собственно тут и передаются все эти свистелки.
     """
 
-    def __init__(self, client: Optional['Client'] = None, **kwargs):
+    def __init__(self, client: Optional['Client'] = None, **kwargs) -> None:
         self.__dict__.update(kwargs)
 
         self.client = client
@@ -35,9 +34,9 @@ class Experiments(YandexMusicObject):
             client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
 
         Returns:
-            :obj:`yandex_music.Experiments`: Какие-то свистелки-перделки, флажки, режимы экспериментальных функций.
+            :obj:`yandex_music.Experiments`: Какие-то свистелки и перделки, флажки, режимы экспериментальных функций.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Experiments, cls).de_json(data, client)

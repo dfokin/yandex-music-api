@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, List, Optional
 
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
-    from yandex_music import Client, Album, Track
+    from yandex_music import Album, Client, Track
 
 
 @model
@@ -12,7 +12,7 @@ class AlbumEvent(YandexMusicObject):
     """Класс, представляющий альбом в событии фида.
 
     Attributes:
-        album (:obj:`yandex_music.Album` | :obj:`None`): Альбом.
+        album (:obj:`yandex_music.Album`, optional): Альбом.
         tracks (:obj:`list` из :obj:`yandex_music.Track`): Треки.
         client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
     """
@@ -21,7 +21,7 @@ class AlbumEvent(YandexMusicObject):
     tracks: List['Track']
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.album, self.tracks)
 
     @classmethod
@@ -35,7 +35,7 @@ class AlbumEvent(YandexMusicObject):
         Returns:
             :obj:`yandex_music.AlbumEvent`: Альбом в событии фида.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(AlbumEvent, cls).de_json(data, client)
@@ -47,7 +47,7 @@ class AlbumEvent(YandexMusicObject):
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client') -> List['AlbumEvent']:
+    def de_list(cls, data: list, client: 'Client') -> List['AlbumEvent']:
         """Десериализация списка объектов.
 
         Args:
@@ -57,10 +57,10 @@ class AlbumEvent(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.AlbumEvent`: Альбомы в событии фида.
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
-        album_events = list()
+        album_events = []
         for album_event in data:
             album_events.append(cls.de_json(album_event, client))
 

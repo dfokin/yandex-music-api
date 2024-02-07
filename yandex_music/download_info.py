@@ -1,14 +1,17 @@
+import xml.dom.minidom as minidom
+from hashlib import md5
 from typing import TYPE_CHECKING, Optional, List, Union
 
-from hashlib import md5
-import xml.dom.minidom as minidom
 
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
-    from yandex_music import Client
     from xml.dom.minicompat import NodeList
+
+    from yandex_music import Client
+
+SIGN_SALT = 'XGRlBW9FXlekgbPrRHuSiA'
 
 
 @model
@@ -33,12 +36,12 @@ class DownloadInfo(YandexMusicObject):
     direct: bool
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.direct_link = None
         self._id_attrs = (self.codec, self.bitrate_in_kbps, self.gain, self.preview, self.download_info_url)
 
     @staticmethod
-    def _get_text_node_data(elements: 'NodeList') -> str:
+    def _get_text_node_data(elements: 'NodeList') -> Optional[str]:
         """:obj:`str`: Получение текстовой информации из узлов XML элемента."""
         for element in elements:
             nodes = element.childNodes
@@ -46,13 +49,15 @@ class DownloadInfo(YandexMusicObject):
                 if node.nodeType == node.TEXT_NODE:
                     return node.data
 
+        return None
+
     def __build_direct_link(self, xml: str) -> str:
-        doc = minidom.parseString(xml)
+        doc = minidom.parseString(xml)  # noqa: S318
         host = self._get_text_node_data(doc.getElementsByTagName('host'))
         path = self._get_text_node_data(doc.getElementsByTagName('path'))
         ts = self._get_text_node_data(doc.getElementsByTagName('ts'))
         s = self._get_text_node_data(doc.getElementsByTagName('s'))
-        sign = md5(('XGRlBW9FXlekgbPrRHuSiA' + path[1::] + s).encode('utf-8')).hexdigest()
+        sign = md5((SIGN_SALT + path[1::] + s).encode('UTF-8')).hexdigest()  # noqa: S324
 
         return f'https://{host}/get-mp3/{sign}/{ts}{path}'
 
@@ -108,6 +113,28 @@ class DownloadInfo(YandexMusicObject):
 
         await self.client.request.download(self.direct_link, filename)
 
+    def download_bytes(self) -> bytes:
+        """Загрузка трека и возврат в виде байтов.
+
+        Returns:
+            :obj:`bytes`: Трек в виде байтов.
+        """
+        if self.direct_link is None:
+            self.get_direct_link()
+
+        return self.client.request.retrieve(self.direct_link)
+
+    async def download_bytes_async(self) -> bytes:
+        """Загрузка трека и возврат в виде байтов.
+
+        Returns:
+            :obj:`bytes`: Трек в виде байтов.
+        """
+        if self.direct_link is None:
+            await self.get_direct_link_async()
+
+        return await self.client.request.retrieve(self.direct_link)
+
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['DownloadInfo']:
         """Десериализация объекта.
@@ -119,7 +146,7 @@ class DownloadInfo(YandexMusicObject):
         Returns:
             :obj:`yandex_music.DownloadInfo`: Варианты загрузки треков.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(DownloadInfo, cls).de_json(data, client)
@@ -127,7 +154,7 @@ class DownloadInfo(YandexMusicObject):
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client', get_direct_links: bool = False) -> List['DownloadInfo']:
+    def de_list(cls, data: list, client: 'Client', get_direct_links: bool = False) -> List['DownloadInfo']:
         """Десериализация списка объектов.
 
         Args:
@@ -138,10 +165,10 @@ class DownloadInfo(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.DownloadInfo`: Варианты загрузки треков.
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
-        downloads_info = list()
+        downloads_info = []
         for download_info in data:
             downloads_info.append(cls.de_json(download_info, client))
 
@@ -163,10 +190,10 @@ class DownloadInfo(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.DownloadInfo`: Варианты загрузки треков.
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
-        downloads_info = list()
+        downloads_info = []
         for download_info in data:
             downloads_info.append(cls.de_json(download_info, client))
 
@@ -184,3 +211,7 @@ class DownloadInfo(YandexMusicObject):
     getDirectLinkAsync = get_direct_link_async
     #: Псевдоним для :attr:`download_async`
     downloadAsync = download_async
+    #: Псевдоним для :attr:`download_bytes`
+    downloadBytes = download_bytes
+    #: Псевдоним для :attr:`download_bytes_async`
+    downloadBytesAsync = download_bytes_async

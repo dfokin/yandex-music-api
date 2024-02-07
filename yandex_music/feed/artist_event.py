@@ -1,10 +1,10 @@
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, List, Optional
 
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
-    from yandex_music import Client, Artist, Track
+    from yandex_music import Artist, Client, Track
 
 
 @model
@@ -12,9 +12,9 @@ class ArtistEvent(YandexMusicObject):
     """Класс, представляющий артиста в событии фида.
 
     Attributes:
-        artist (:obj:`yandex_music.Artist` | :obj:`None`): Артист.
-        tracks (:obj:`list` :obj:`yandex_music.Track`): Треки.
-        similar_to_artists_from_history (:obj:`list` :obj:`yandex_music.Artist`): Похожие артисты из истории.
+        artist (:obj:`yandex_music.Artist`, optional): Артист.
+        tracks (:obj:`list` из :obj:`yandex_music.Track`): Треки.
+        similar_to_artists_from_history (:obj:`list` из :obj:`yandex_music.Artist`): Похожие артисты из истории.
         subscribed (:obj:`bool`): Подписан ли на событие.
         client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
     """
@@ -25,7 +25,7 @@ class ArtistEvent(YandexMusicObject):
     subscribed: Optional['bool'] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.artist, self.tracks, self.similar_to_artists_from_history)
 
     @classmethod
@@ -39,7 +39,7 @@ class ArtistEvent(YandexMusicObject):
         Returns:
             :obj:`yandex_music.ArtistEvent`: Артист из события фида.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(ArtistEvent, cls).de_json(data, client)
@@ -52,7 +52,7 @@ class ArtistEvent(YandexMusicObject):
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client') -> List['ArtistEvent']:
+    def de_list(cls, data: list, client: 'Client') -> List['ArtistEvent']:
         """Десериализация списка объектов.
 
         Args:
@@ -62,10 +62,10 @@ class ArtistEvent(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.ArtistEvent`: Артисты из события фида.
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
-        artist_events = list()
+        artist_events = []
         for artist_event in data:
             artist_events.append(cls.de_json(artist_event, client))
 

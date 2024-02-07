@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 class Lyrics(YandexMusicObject):
     """Класс, представляющий текст трека.
 
+    Warning:
+        Получение текста из дополнительной информации устарело. Используйте
+        :func:`yandex_music.Client.tracks_lyrics`.
+
     Attributes:
         id (:obj:`int`): Уникальный идентификатор текста трека.
         lyrics (:obj:`str`): Первые строки текст песни.
@@ -32,7 +36,7 @@ class Lyrics(YandexMusicObject):
     url: Optional[str] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (
             self.id,
             self.lyrics,
@@ -53,7 +57,7 @@ class Lyrics(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Lyrics`: Текст трека.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Lyrics, cls).de_json(data, client)

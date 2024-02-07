@@ -21,7 +21,7 @@ class Icon(YandexMusicObject):
     image_url: str
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.background_color, self.image_url)
 
     def download(self, filename: str, size: str = '200x200') -> None:
@@ -42,7 +42,29 @@ class Icon(YandexMusicObject):
         """
         await self.client.request.download(self.get_url(size), filename)
 
-    def get_url(self, size: str = '200x200'):
+    def download_bytes(self, size: str = '200x200') -> bytes:
+        """Загрузка иконки и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер иконки.
+
+        Returns:
+            :obj:`bytes`: Иконка в виде байтов.
+        """
+        return self.client.request.retrieve(self.get_url(size))
+
+    async def download_bytes_async(self, size: str = '200x200') -> bytes:
+        """Загрузка иконки и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер иконки.
+
+        Returns:
+            :obj:`bytes`: Иконка в виде байтов.
+        """
+        return await self.client.request.retrieve(self.get_url(size))
+
+    def get_url(self, size: str = '200x200') -> str:
         """Получение URL иконки.
 
         Args:
@@ -61,7 +83,7 @@ class Icon(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Icon`: Иконка.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Icon, cls).de_json(data, client)
@@ -72,3 +94,9 @@ class Icon(YandexMusicObject):
 
     #: Псевдоним для :attr:`download_async`
     downloadAsync = download_async
+    #: Псевдоним для :attr:`download_bytes`
+    downloadBytes = download_bytes
+    #: Псевдоним для :attr:`download_bytes_async`
+    downloadBytesAsync = download_bytes_async
+    #: Псевдоним для :attr:`get_url`
+    getUrl = get_url

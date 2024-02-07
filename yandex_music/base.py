@@ -1,8 +1,8 @@
 import dataclasses
-import logging
 import keyword
+import logging
 from abc import ABCMeta
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from yandex_music import Client
@@ -22,6 +22,8 @@ new_issue_by_template_url = 'https://bit.ly/3dsFxyH'
 
 
 class YandexMusicObject:
+    """Базовый класс для всех объектов библиотеки."""
+
     __metaclass__ = ABCMeta
     _id_attrs: tuple = ()
 
@@ -31,16 +33,33 @@ class YandexMusicObject:
     def __repr__(self) -> str:
         return str(self)
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Any:  # noqa: ANN401
         return self.__dict__[item]
 
     @staticmethod
-    def report_unknown_fields_callback(obj, unknown_fields):
+    def report_unknown_fields_callback(cls: type, unknown_fields: dict) -> None:
+        """Обратный вызов для обработки неизвестных полей."""
         logger.warning(
             f'Found unknown fields received from API! Please copy warn message '
             f'and send to {new_issue_by_template_url} (github issue), thank you!'
         )
-        logger.warning(f'Type: {type(obj)}; fields: {unknown_fields}')
+        logger.warning(f'Type: {cls.__module__}.{cls.__name__}; fields: {unknown_fields}')
+
+    @staticmethod
+    def is_valid_model_data(data: Any, *, array: bool = False) -> bool:  # noqa: ANN401
+        """Проверка на валидность данных.
+
+        Args:
+            data (:obj:`Any`): Данные для проверки.
+            array (:obj:`bool`, optional): Является ли объект массивом.
+
+        Returns:
+            :obj:`bool`: Валидны ли данные.
+        """
+        if array:
+            return data and isinstance(data, list) and all(isinstance(item, dict) for item in data)
+
+        return data and isinstance(data, dict)
 
     @classmethod
     def de_json(cls, data: dict, client: Optional['Client']) -> Optional[dict]:
@@ -53,15 +72,15 @@ class YandexMusicObject:
         Returns:
             :obj:`yandex_music.YandexMusicObject` | :obj:`None`: :obj:`yandex_music.YandexMusicObject` или :obj:`None`.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = data.copy()
 
         fields = {f.name for f in dataclasses.fields(cls)}
 
-        cleaned_data = dict()
-        unknown_data = dict()
+        cleaned_data = {}
+        unknown_data = {}
 
         for k, v in data.items():
             if k in fields:
@@ -70,11 +89,11 @@ class YandexMusicObject:
                 unknown_data[k] = v
 
         if client.report_unknown_fields and unknown_data:
-            YandexMusicObject.report_unknown_fields_callback(cls, unknown_data)
+            cls.report_unknown_fields_callback(cls, unknown_data)
 
         return cleaned_data
 
-    def to_json(self, for_request=False) -> str:
+    def to_json(self, for_request: bool = False) -> str:
         """Сериализация объекта.
 
         Args:
@@ -85,7 +104,7 @@ class YandexMusicObject:
         """
         return json.dumps(self.to_dict(for_request), ensure_ascii=not ujson)
 
-    def to_dict(self, for_request=False) -> dict:
+    def to_dict(self, for_request: bool = False) -> dict:
         """Рекурсивная сериализация объекта.
 
         Args:
@@ -100,15 +119,14 @@ class YandexMusicObject:
             :obj:`dict`: Сериализованный в dict объект.
         """
 
-        def parse(val):
+        def parse(val: Any) -> Any:  # noqa: ANN401
             if hasattr(val, 'to_dict'):
                 return val.to_dict(for_request)
-            elif isinstance(val, list):
+            if isinstance(val, list):
                 return [parse(it) for it in val]
-            elif isinstance(val, dict):
+            if isinstance(val, dict):
                 return {key: parse(value) for key, value in val.items()}
-            else:
-                return val
+            return val
 
         data = self.__dict__.copy()
         data.pop('client', None)
@@ -129,7 +147,7 @@ class YandexMusicObject:
 
         return parse(data)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Any) -> bool:  # noqa: ANN401
         """Проверка на равенство двух объектов.
 
         Note:

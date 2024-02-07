@@ -1,25 +1,23 @@
-import re
-import logging
-import keyword
-
-from typing import TYPE_CHECKING, Optional, Union
-
 # Не используется ujson из-за отсутствия в нём object_hook'a
 # Отправка вообще application/x-www-form-urlencoded, а не JSON'a
 # https://github.com/psf/requests/blob/master/requests/models.py#L508
 import json
+import keyword
+import logging
+import re
+from typing import TYPE_CHECKING, Optional, Union
 
 import requests
 
-from yandex_music.utils.response import Response
 from yandex_music.exceptions import (
-    UnauthorizedError,
     BadRequestError,
     NetworkError,
-    YandexMusicError,
-    TimedOutError,
     NotFoundError,
+    TimedOutError,
+    UnauthorizedError,
+    YandexMusicError,
 )
+from yandex_music.utils.response import Response
 
 if TYPE_CHECKING:
     from yandex_music import Client
@@ -27,17 +25,21 @@ if TYPE_CHECKING:
 
 USER_AGENT = 'Yandex-Music-API'
 HEADERS = {
-    'X-Yandex-Music-Client': 'YandexMusicAndroid/23020251',
+    'X-Yandex-Music-Client': 'YandexMusicAndroid/24023621',
 }
+DEFAULT_TIMEOUT = 5
 
 reserved_names = keyword.kwlist + ['client']
 
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
+default_timeout = object()
+
 
 class Request:
-    """Вспомогательный класс для yandex_music, представляющий методы для выполнения POST и GET запросов, скачивания
-    файлов.
+    """Вспомогательный класс для выполнения запросов.
+
+    Предоставляет методы для выполнения POST и GET запросов, скачивания файлов.
 
     Args:
         client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
@@ -45,8 +47,11 @@ class Request:
         proxy_url (:obj:`str`, optional): Прокси.
     """
 
-    def __init__(self, client=None, headers=None, proxy_url=None):
+    def __init__(self, client=None, headers=None, proxy_url=None, timeout=default_timeout):
         self.headers = headers or HEADERS.copy()
+
+        self._timeout = DEFAULT_TIMEOUT
+        self.set_timeout(timeout)
 
         self.client = self.set_and_return_client(client)
 
@@ -66,6 +71,16 @@ class Request:
             lang (:obj:`str`): Язык.
         """
         self.headers.update({'Accept-Language': lang})
+
+    def set_timeout(self, timeout: Union[int, float, object] = default_timeout):
+        """Устанавливает время ожидания для всех запросов.
+
+        Args:
+            timeout (:obj:`int` | :obj:`float`): Время ожидания от сервера.
+        """
+        self._timeout = timeout
+        if timeout is default_timeout:
+            self._timeout = DEFAULT_TIMEOUT
 
     def set_authorization(self, token: str) -> None:
         """Добавляет заголовок авторизации для каждого запроса.
@@ -153,21 +168,21 @@ class Request:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
         try:
-            decoded_s = json_data.decode('utf-8')
+            decoded_s = json_data.decode('UTF-8')
             data = json.loads(decoded_s, object_hook=Request._object_hook)
 
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as e:
             logging.getLogger(__name__).debug('Logging raw invalid UTF-8 response:\n%r', json_data)
-            raise YandexMusicError('Server response could not be decoded using UTF-8')
-        except (AttributeError, ValueError):
-            raise YandexMusicError('Invalid server response')
+            raise YandexMusicError('Server response could not be decoded using UTF-8') from e
+        except (AttributeError, ValueError) as e:
+            raise YandexMusicError('Invalid server response') from e
 
         if data.get('result') is None:
             data = {'result': data, 'error': data.get('error'), 'error_description': data.get('error_description')}
 
         return Response.de_json(data, self.client)
 
-    def _request_wrapper(self, *args, **kwargs):
+    def _request_wrapper(self, *args, **kwargs):  # noqa: C901
         """Обёртка над запросом библиотеки `requests`.
 
         Note:
@@ -183,7 +198,8 @@ class Request:
 
         Raises:
             :class:`yandex_music.exceptions.TimedOutError`: При превышении времени ожидания.
-            :class:`yandex_music.exceptions.UnauthorizedError`: При невалидном токене, долгом ожидании прямой ссылки на файл.
+            :class:`yandex_music.exceptions.UnauthorizedError`: При невалидном токене,
+                долгом ожидании прямой ссылки на файл.
             :class:`yandex_music.exceptions.BadRequestError`: При неправильном запросе.
             :class:`yandex_music.exceptions.NetworkError`: При проблемах с сетью.
         """
@@ -192,12 +208,15 @@ class Request:
 
         kwargs['headers']['User-Agent'] = USER_AGENT
 
+        if kwargs['timeout'] is default_timeout:
+            kwargs['timeout'] = self._timeout
+
         try:
             resp = requests.request(*args, **kwargs)
-        except requests.Timeout:
-            raise TimedOutError()
+        except requests.Timeout as e:
+            raise TimedOutError from e
         except requests.RequestException as e:
-            raise NetworkError(e)
+            raise NetworkError(e) from e
 
         if 200 <= resp.status_code <= 299:
             return resp.content
@@ -210,19 +229,21 @@ class Request:
 
         if resp.status_code in (401, 403):
             raise UnauthorizedError(message)
-        elif resp.status_code == 400:
+        if resp.status_code == 400:
             raise BadRequestError(message)
-        elif resp.status_code == 404:
+        if resp.status_code == 404:
             raise NotFoundError(message)
-        elif resp.status_code in (409, 413):
+        if resp.status_code in (409, 413):
             raise NetworkError(message)
 
-        elif resp.status_code == 502:
+        if resp.status_code == 502:
             raise NetworkError('Bad Gateway')
-        else:
-            raise NetworkError(f'{message} ({resp.status_code}): {resp.content}')
 
-    def get(self, url: str, params: dict = None, timeout: Union[int, float] = 5, *args, **kwargs) -> Union[dict, str]:
+        raise NetworkError(f'{message} ({resp.status_code}): {resp.content}')
+
+    def get(
+        self, url: str, params: dict = None, timeout: Union[int, float] = default_timeout, **kwargs
+    ) -> Union[dict, str]:
         """Отправка GET запроса.
 
         Args:
@@ -230,7 +251,6 @@ class Request:
             params (:obj:`str`): GET параметры для запроса.
             timeout (:obj:`int` | :obj:`float`): Используется как время ожидания ответа от сервера вместо указанного
                 при создании пула.
-            *args: Произвольные аргументы для `requests.request`.
             **kwargs: Произвольные ключевые аргументы для `requests.request`.
 
         Returns:
@@ -240,12 +260,12 @@ class Request:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
         result = self._request_wrapper(
-            'GET', url, params=params, headers=self.headers, proxies=self.proxies, timeout=timeout, *args, **kwargs
+            'GET', url, params=params, headers=self.headers, proxies=self.proxies, timeout=timeout, **kwargs
         )
 
         return self._parse(result).get_result()
 
-    def post(self, url, data=None, timeout=5, *args, **kwargs) -> Union[dict, str]:
+    def post(self, url, data=None, timeout=default_timeout, **kwargs) -> Union[dict, str]:
         """Отправка POST запроса.
 
         Args:
@@ -253,7 +273,6 @@ class Request:
             data (:obj:`str`): POST тело запроса.
             timeout (:obj:`int` | :obj:`float`): Используется как время ожидания ответа от сервера вместо указанного
                 при создании пула.
-            *args: Произвольные аргументы для `requests.request`.
             **kwargs: Произвольные ключевые аргументы для `requests.request`.
 
         Returns:
@@ -263,19 +282,18 @@ class Request:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
         result = self._request_wrapper(
-            'POST', url, headers=self.headers, proxies=self.proxies, data=data, timeout=timeout, *args, **kwargs
+            'POST', url, headers=self.headers, proxies=self.proxies, data=data, timeout=timeout, **kwargs
         )
 
         return self._parse(result).get_result()
 
-    def retrieve(self, url, timeout=5, *args, **kwargs) -> bytes:
+    def retrieve(self, url, timeout=default_timeout, **kwargs) -> bytes:
         """Отправка GET запроса и получение содержимого без обработки (парсинга).
 
         Args:
             url (:obj:`str`): Адрес для запроса.
             timeout (:obj:`int` | :obj:`float`): Используется как время ожидания ответа от сервера вместо указанного
                 при создании пула.
-            *args: Произвольные аргументы для `requests.request`.
             **kwargs: Произвольные ключевые аргументы для `requests.request`.
 
         Returns:
@@ -284,9 +302,9 @@ class Request:
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        return self._request_wrapper('GET', url, proxies=self.proxies, timeout=timeout, *args, **kwargs)
+        return self._request_wrapper('GET', url, proxies=self.proxies, timeout=timeout, **kwargs)
 
-    def download(self, url, filename, timeout=5, *args, **kwargs) -> None:
+    def download(self, url, filename, timeout=default_timeout, **kwargs) -> None:
         """Отправка запроса на получение содержимого и его запись в файл.
 
         Args:
@@ -294,12 +312,11 @@ class Request:
             filename (:obj:`str`): Путь и(или) название файла вместе с расширением.
             timeout (:obj:`int` | :obj:`float`): Используется как время ожидания ответа от сервера вместо указанного
                 при создании пула.
-            *args: Произвольные аргументы для `requests.request`.
             **kwargs: Произвольные ключевые аргументы для `requests.request`.
 
         Raises:
             :class:`yandex_music.exceptions.YandexMusicError`: Базовое исключение библиотеки.
         """
-        result = self.retrieve(url, timeout=timeout, *args, *kwargs)
+        result = self.retrieve(url, timeout=timeout, **kwargs)
         with open(filename, 'wb') as f:
             f.write(result)

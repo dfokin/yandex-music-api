@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, List, Optional
 
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
@@ -40,7 +40,7 @@ class Promotion(YandexMusicObject):
     image: str
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (
             self.promo_id,
             self.title,
@@ -53,6 +53,17 @@ class Promotion(YandexMusicObject):
             self.image,
         )
 
+    def get_image_url(self, size: str = '300x300') -> str:
+        """Возвращает URL изображения.
+
+        Args:
+            size (:obj:`str`, optional): Размер изображения.
+
+        Returns:
+            :obj:`str`: URL изображения.
+        """
+        return f'https://{self.image.replace("%%", size)}'
+
     def download_image(self, filename: str, size: str = '300x300') -> None:
         """Загрузка рекламного изображения.
 
@@ -60,7 +71,7 @@ class Promotion(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер изображения.
         """
-        self.client.request.download(f'https://{self.image.replace("%%", size)}', filename)
+        self.client.request.download(self.get_image_url(size), filename)
 
     async def download_image_async(self, filename: str, size: str = '300x300') -> None:
         """Загрузка рекламного изображения.
@@ -69,7 +80,29 @@ class Promotion(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер изображения.
         """
-        await self.client.request.download(f'https://{self.image.replace("%%", size)}', filename)
+        await self.client.request.download(self.get_image_url(size), filename)
+
+    def download_image_bytes(self, size: str = '300x300') -> bytes:
+        """Загрузка рекламного изображения и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер изображения.
+
+        Returns:
+            :obj:`bytes`: Рекламное изображение в виде байтов.
+        """
+        return self.client.request.retrieve(self.get_image_url(size))
+
+    async def download_image_bytes_async(self, size: str = '300x300') -> bytes:
+        """Загрузка рекламного изображения и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер изображения.
+
+        Returns:
+            :obj:`bytes`: Рекламное изображение в виде байтов.
+        """
+        return await self.client.request.retrieve(self.get_image_url(size))
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['Promotion']:
@@ -82,7 +115,7 @@ class Promotion(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Promotion`: Продвижение (реклама).
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Promotion, cls).de_json(data, client)
@@ -90,7 +123,7 @@ class Promotion(YandexMusicObject):
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client') -> List['Promotion']:
+    def de_list(cls, data: list, client: 'Client') -> List['Promotion']:
         """Десериализация списка объектов.
 
         Args:
@@ -100,10 +133,10 @@ class Promotion(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.Promotion`: Продвижения (реклама).
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
-        promotions = list()
+        promotions = []
         for promotion in data:
             promotions.append(cls.de_json(promotion, client))
 
@@ -111,7 +144,13 @@ class Promotion(YandexMusicObject):
 
     # camelCase псевдонимы
 
+    #: Псевдоним для :attr:`get_image_url`
+    getImageUrl = get_image_url
     #: Псевдоним для :attr:`download_image`
     downloadImage = download_image
     #: Псевдоним для :attr:`download_image_async`
     downloadImageAsync = download_image_async
+    #: Псевдоним для :attr:`download_image_bytes`
+    downloadImageBytes = download_image_bytes
+    #: Псевдоним для :attr:`download_image_bytes_async`
+    downloadImageBytesAsync = download_image_bytes_async

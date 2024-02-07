@@ -4,7 +4,7 @@ from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
-    from yandex_music import Client, Account, Permissions, Subscription, Plus, StationData, Alert
+    from yandex_music import Account, Alert, Client, Permissions, Plus, StationData, Subscription
 
 
 @model
@@ -27,6 +27,8 @@ class Status(YandexMusicObject):
         bar_below (:obj:`yandex_music.Alert`, optional): Блок с предупреждениями о конце подписке и подарках.
         premium_region (:obj:`int`, optional): Регион TODO.
         experiment (:obj:`int`, optional): Включенная новая фича на аккаунте (её ID) TODO.
+        pretrial_active (:obj:`bool`, optional): TODO.
+        userhash (:obj:`str`, optional): Хэш-код идентификатора пользователя.
         client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
     """
 
@@ -45,9 +47,11 @@ class Status(YandexMusicObject):
     bar_below: Optional['Alert'] = None
     premium_region: Optional[int] = None
     experiment: Optional[int] = None
+    pretrial_active: Optional[bool] = None
+    userhash: Optional[str] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.account, self.permissions)
 
     @classmethod
@@ -61,11 +65,11 @@ class Status(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Status`: Информация об аккаунте пользователя.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Status, cls).de_json(data, client)
-        from yandex_music import Account, Permissions, Plus, Subscription, StationData, Alert
+        from yandex_music import Account, Alert, Permissions, Plus, StationData, Subscription
 
         data['account'] = Account.de_json(data.get('account'), client)
         data['permissions'] = Permissions.de_json(data.get('permissions'), client)

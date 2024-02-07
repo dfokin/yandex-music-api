@@ -1,15 +1,15 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# http://www.sphinx-doc.org/en/master/config
+"""Configuration file for the Sphinx documentation builder.
 
-# -- Path setup --------------------------------------------------------------
+This file only contains a selection of the most common options. For a full
+list see the documentation:
+http://www.sphinx-doc.org/en/master/config
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
+-- Path setup --------------------------------------------------------------
+
+If extensions (or modules to document with autodoc) are in another directory,
+add these directories to sys.path here. If the directory is relative to the
+documentation root, use os.path.abspath to make it absolute, like shown here.
+"""
 import os
 import sys
 
@@ -17,11 +17,16 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 master_doc = 'index'
 
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
 # -- Project information -----------------------------------------------------
 
 project = 'Yandex Music API'
-copyright = '2019-2022 Il`ya (Marshal) <https://github.com/MarshalX>'
-author = 'Il`ya Semyonov'
+copyright = '2019-2023 Ilya (Marshal) <https://github.com/MarshalX>'
+author = 'Ilya (Marshal)'
 
 language = 'en'
 
@@ -30,7 +35,7 @@ language = 'en'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx_copybutton']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon', 'sphinx_copybutton', 'myst_parser']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -40,6 +45,12 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
+# myst
+
+myst_heading_anchors = 4
+# https://myst-parser.readthedocs.io/en/latest/syntax/optional.html?highlight=header-anchors#code-fences-using-colons
+myst_enable_extensions = ['colon_fence']
+# TODO add substitution https://myst-parser.readthedocs.io/en/latest/syntax/optional.html?highlight=header-anchors#substitutions-with-jinja2
 
 # -- Options for HTML output -------------------------------------------------
 

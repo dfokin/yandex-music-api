@@ -1,14 +1,16 @@
+#!/usr/bin/env python3
+"""Generate async version of client.py and request.py."""
 import subprocess
 
-
-DISCLAIMER = '# THIS IS AUTO GENERATED COPY OF client.py. DON\'T EDIT IN BY HANDS #'
+DISCLAIMER = "# THIS IS AUTO GENERATED COPY OF client.py. DON'T EDIT IN BY HANDS #"
 DISCLAIMER = f'{"#" * len(DISCLAIMER)}\n{DISCLAIMER}\n{"#" * len(DISCLAIMER)}\n\n'
 
 REQUEST_METHODS = ('_request_wrapper', 'get', 'post', 'retrieve', 'download')
 
 
-def gen_request(output_request_filename):
-    with open('yandex_music/utils/request.py', 'r') as f:
+def gen_request(output_request_filename: str) -> None:
+    """Generate async version of request.py."""
+    with open('yandex_music/utils/request.py', 'r', encoding='UTF-8') as f:
         code = f.read()
 
     code = code.replace('import requests', 'import asyncio\nimport aiohttp\nimport aiofiles')
@@ -17,7 +19,7 @@ def gen_request(output_request_filename):
     code = code.replace('resp.content', 'content')
     code = code.replace(
         'resp = requests.request(*args, **kwargs)',
-        f'async with aiohttp.request(*args, **kwargs) as _resp:\n{" " * 16}resp = _resp\n{" " * 16}content = await resp.content.read()',
+        f'async with aiohttp.request(*args, **kwargs) as _resp:\n{" " * 16}resp = _resp\n{" " * 16}content = await resp.content.read()',  # noqa: E501
     )
 
     code = code.replace('except requests.Timeout', 'except asyncio.TimeoutError')
@@ -29,10 +31,9 @@ def gen_request(output_request_filename):
         code = code.replace(f'self.{method}(', f'await self.{method}(')
 
     code = code.replace('proxies=self.proxies', 'proxy=self.proxy_url')
-    code = code.replace('timeout=timeout', 'timeout=aiohttp.ClientTimeout(total=timeout)')
-    # undo one specific case
     code = code.replace(
-        'self.retrieve(url, timeout=aiohttp.ClientTimeout(total=timeout)', 'self.retrieve(url, timeout=timeout'
+        "kwargs['timeout'] = self._timeout",
+        f"kwargs['timeout'] = aiohttp.ClientTimeout(total=self._timeout)\n{' ' * 8}else:\n{' ' * 12}kwargs['timeout'] = aiohttp.ClientTimeout(total=kwargs['timeout'])",  # noqa: E501
     )
 
     # download method
@@ -44,12 +45,13 @@ def gen_request(output_request_filename):
     code = code.replace('requests.request', 'aiohttp.request')
 
     code = DISCLAIMER + code
-    with open(output_request_filename, 'w') as f:
+    with open(output_request_filename, 'w', encoding='UTF-8') as f:
         f.write(code)
 
 
-def gen_client(output_client_filename):
-    with open('yandex_music/client.py', 'r') as f:
+def gen_client(output_client_filename: str) -> None:
+    """Generate async version of client.py."""
+    with open('yandex_music/client.py', 'r', encoding='UTF-8') as f:
         code = f.read()
 
     code = code.replace('Client', 'ClientAsync')
@@ -69,18 +71,12 @@ def gen_client(output_client_filename):
         code = code.replace(f'self.{method}(', f'await self.{method}(')
 
     # specific cases
-    code = code.replace(
-        'self.users_playlists_change(',
-        'await self.users_playlists_change('
-    )
-    code = code.replace(
-        'self.rotor_station_feedback(',
-        'await self.rotor_station_feedback('
-    )
+    code = code.replace('self.users_playlists_change(', 'await self.users_playlists_change(')
+    code = code.replace('self.rotor_station_feedback(', 'await self.rotor_station_feedback(')
     code = code.replace('return DownloadInfo.de_list', 'return await DownloadInfo.de_list_async')
 
     code = DISCLAIMER + code
-    with open(output_client_filename, 'w') as f:
+    with open(output_client_filename, 'w', encoding='UTF-8') as f:
         f.write(code)
 
 
@@ -91,4 +87,6 @@ if __name__ == '__main__':
     gen_client(client_filename)
 
     for file in (request_filename, client_filename):
-        subprocess.run(['black', '--config', 'black.toml', file])
+        subprocess.run(['ruff', 'format', '--quiet', file])  # noqa: S603, S607
+        subprocess.run(['ruff', '--quiet', '--fix', file])  # noqa: S603, S607
+        subprocess.run(['ruff', 'format', '--quiet', file])  # noqa: S603, S607

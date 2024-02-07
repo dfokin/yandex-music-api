@@ -27,7 +27,7 @@ class Tag(YandexMusicObject):
     og_image: Optional[str] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.id,)
 
     @classmethod
@@ -41,7 +41,7 @@ class Tag(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Tag`: Тег.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Tag, cls).de_json(data, client)
@@ -49,3 +49,4 @@ class Tag(YandexMusicObject):
         return cls(client=client, **data)
 
     # TODO (MarshalX) add download_og_image shortcut?
+    #  https://github.com/MarshalX/yandex-music-api/issues/556

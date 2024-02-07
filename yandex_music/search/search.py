@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING, Optional
 
-from yandex_music import YandexMusicObject
+from yandex_music import Album, Artist, Playlist, Track, User, Video, YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
-    from yandex_music import Client, Best, SearchResult
+    from yandex_music import Best, Client, SearchResult
 
 
 @model
@@ -36,14 +36,14 @@ class Search(YandexMusicObject):
     search_request_id: str
     text: str
     best: Optional['Best']
-    albums: Optional['SearchResult']
-    artists: Optional['SearchResult']
-    playlists: Optional['SearchResult']
-    tracks: Optional['SearchResult']
-    videos: Optional['SearchResult']
-    users: Optional['SearchResult']
-    podcasts: Optional['SearchResult']
-    podcast_episodes: Optional['SearchResult']
+    albums: Optional['SearchResult[Album]']
+    artists: Optional['SearchResult[Artist]']
+    playlists: Optional['SearchResult[Playlist]']
+    tracks: Optional['SearchResult[Track]']
+    videos: Optional['SearchResult[Video]']
+    users: Optional['SearchResult[User]']
+    podcasts: Optional['SearchResult[Album]']
+    podcast_episodes: Optional['SearchResult[Track]']
     type: Optional[str] = None
     page: Optional[int] = None
     per_page: Optional[int] = None
@@ -53,7 +53,7 @@ class Search(YandexMusicObject):
     nocorrect: Optional[bool] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (
             self.search_request_id,
             self.text,
@@ -73,22 +73,26 @@ class Search(YandexMusicObject):
 
         Args:
             page (:obj:`int`): Номер страницы.
+            *args: Произвольные аргументы (будут переданы в запрос).
+            **kwargs: Произвольные именованные аргументы (будут переданы в запрос).
 
         Returns:
             :obj:`yandex_music.Search` | :obj:`None`: Страница результата поиска или :obj:`None`.
         """
-        return self.client.search(self.text, self.nocorrect, self.type_, page, *args, **kwargs)
+        return self.client.search(self.text, self.nocorrect, self.type, page, *args, **kwargs)
 
     async def get_page_async(self, page: int, *args, **kwargs) -> Optional['Search']:
         """Получение определённой страницы поиска.
 
         Args:
             page (:obj:`int`): Номер страницы.
+            *args: Произвольные аргументы (будут переданы в запрос).
+            **kwargs: Произвольные именованные аргументы (будут переданы в запрос).
 
         Returns:
             :obj:`yandex_music.Search` | :obj:`None`: Страница результата поиска или :obj:`None`.
         """
-        return await self.client.search(self.text, self.nocorrect, self.type_, page, *args, **kwargs)
+        return await self.client.search(self.text, self.nocorrect, self.type, page, *args, **kwargs)
 
     def next_page(self, *args, **kwargs) -> Optional['Search']:
         """Получение следующей страницы поиска.
@@ -133,11 +137,11 @@ class Search(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Search`: Результаты поиска.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Search, cls).de_json(data, client)
-        from yandex_music import SearchResult, Best
+        from yandex_music import Best, SearchResult
 
         # в ОЧЕНЬ редких случаях сервер творит дичь и может вернуть результат плейлистов в поле artists
         # или вернуть в поле users результаты с плейлистами
@@ -165,7 +169,7 @@ class Search(YandexMusicObject):
     #: Псевдоним для :attr:`next_page`
     nextPage = next_page
     #: Псевдоним для :attr:`next_page_async`
-    nextPageASync = next_page_async
+    nextPageAsync = next_page_async
     #: Псевдоним для :attr:`prev_page`
     prevPage = prev_page
     #: Псевдоним для :attr:`prev_page_async`

@@ -16,7 +16,7 @@ class UserSettings(YandexMusicObject):
 
         Доступные значения для полей `user_music_visibility` и `user_social_visibility`: `private`, `public`.
 
-    Notes:
+    Note:
         `promos_disabled`, `ads_disabled`, `rbt_disabled` устарели и не работают.
 
         `last_fm_scrobbling_enabled`, `facebook_scrobbling_enabled` выглядят устаревшими.
@@ -61,7 +61,7 @@ class UserSettings(YandexMusicObject):
     show_disk_tracks_in_library: Optional[bool] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (
             self.uid,
             self.last_fm_scrobbling_enabled,
@@ -93,7 +93,7 @@ class UserSettings(YandexMusicObject):
         Returns:
             :obj:`yandex_music.UserSettings`: Настройки пользователя.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(UserSettings, cls).de_json(data, client)

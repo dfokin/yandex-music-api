@@ -1,23 +1,25 @@
-from typing import Any, TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from yandex_music import YandexMusicObject
 from yandex_music.utils import model
 
 if TYPE_CHECKING:
     from yandex_music import (
-        Client,
-        User,
-        Cover,
-        MadeFor,
-        TrackShort,
-        PlaylistAbsence,
-        PlayCounter,
-        PlaylistRecommendations,
         Artist,
-        TrackId,
-        Contest,
-        OpenGraphData,
         Brand,
+        Client,
+        Contest,
+        Cover,
+        CustomWave,
+        MadeFor,
+        OpenGraphData,
+        Pager,
+        PlayCounter,
+        PlaylistAbsence,
+        PlaylistRecommendations,
+        TrackId,
+        TrackShort,
+        User,
     )
 
 
@@ -94,6 +96,8 @@ class Playlist(YandexMusicObject):
         ready (:obj:`bool`, optional): Готовность TODO.
         is_for_from: TODO.
         regions: Регион TODO.
+        custom_wave (:obj:'yandex_music.CustomWave`, optional): Описание плейлиста. TODO.
+        pager (:obj:`yandex_music.Pager`, optional): Пагинатор.
         client (:obj:`yandex_music.Client`, optional): Клиент Yandex Music.
     """
 
@@ -152,17 +156,21 @@ class Playlist(YandexMusicObject):
     ready: Optional[bool] = None
     is_for_from: Any = None
     regions: Any = None
+    custom_wave: Optional['CustomWave'] = None
+    pager: Optional['Pager'] = None
     client: Optional['Client'] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._id_attrs = (self.uid, self.kind, self.title, self.playlist_absence)
 
     @property
     def is_mine(self) -> bool:
+        """Является ли плейлист моим."""
         return self.owner.uid == self.client.me.account.uid
 
     @property
     def playlist_id(self) -> str:
+        """Полный ID плейлиста."""
         return f'{self.owner.uid}:{self.kind}'
 
     def get_recommendations(self, *args, **kwargs) -> Optional['PlaylistRecommendations']:
@@ -179,6 +187,28 @@ class Playlist(YandexMusicObject):
         """
         return await self.client.users_playlists_recommendations(self.kind, self.owner.uid, *args, **kwargs)
 
+    def get_animated_cover_url(self, size: str = '300x300') -> str:
+        """Возвращает URL анимированной обложки.
+
+        Args:
+            size (:obj:`str`, optional): Размер анимированной обложки.
+
+        Returns:
+            :obj:`str`: URL анимированной обложки.
+        """
+        return f'https://{self.animated_cover_uri.replace("%%", size)}'
+
+    def get_og_image_url(self, size: str = '300x300') -> str:
+        """Возвращает URL обложки.
+
+        Args:
+            size (:obj:`str`, optional): Размер обложки.
+
+        Returns:
+            :obj:`str`: URL обложки.
+        """
+        return f'https://{self.og_image.replace("%%", size)}'
+
     def download_animated_cover(self, filename: str, size: str = '200x200') -> None:
         """Загрузка анимированной обложки.
 
@@ -186,7 +216,7 @@ class Playlist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением (GIF).
             size (:obj:`str`, optional): Размер анимированной обложки.
         """
-        self.client.request.download(f'https://{self.animated_cover_uri.replace("%%", size)}', filename)
+        self.client.request.download(self.get_animated_cover_url(size), filename)
 
     async def download_animated_cover_async(self, filename: str, size: str = '200x200') -> None:
         """Загрузка анимированной обложки.
@@ -195,7 +225,7 @@ class Playlist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением (GIF).
             size (:obj:`str`, optional): Размер анимированной обложки.
         """
-        await self.client.request.download(f'https://{self.animated_cover_uri.replace("%%", size)}', filename)
+        await self.client.request.download(self.get_animated_cover_url(size), filename)
 
     def download_og_image(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
@@ -206,7 +236,7 @@ class Playlist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        self.client.request.download(self.get_og_image_url(size), filename)
 
     async def download_og_image_async(self, filename: str, size: str = '200x200') -> None:
         """Загрузка обложки.
@@ -217,19 +247,75 @@ class Playlist(YandexMusicObject):
             filename (:obj:`str`): Путь для сохранения файла с названием и расширением.
             size (:obj:`str`, optional): Размер обложки.
         """
-        await self.client.request.download(f'https://{self.og_image.replace("%%", size)}', filename)
+        await self.client.request.download(self.get_og_image_url(size), filename)
 
-    def rename(self, name: str) -> None:
+    def download_animated_cover_bytes(self, size: str = '200x200') -> bytes:
+        """Загрузка анимированной обложки и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер анимированной обложки.
+
+        Returns:
+            :obj:`bytes`: Анимированная обложка в виде байтов.
+        """
+        return self.client.request.retrieve(self.get_animated_cover_url(size))
+
+    async def download_animated_cover_bytes_async(self, size: str = '200x200') -> bytes:
+        """Загрузка анимированной обложки и возврат в виде байтов.
+
+        Args:
+            size (:obj:`str`, optional): Размер анимированной обложки.
+
+        Returns:
+            :obj:`bytes`: Анимированная обложка в виде байтов.
+        """
+        return await self.client.request.retrieve(self.get_animated_cover_url(size))
+
+    def download_og_image_bytes(self, size: str = '200x200') -> bytes:
+        """Загрузка обложки и возврат в виде байтов.
+
+        Используйте это только когда нет self.cover!
+
+        Args:
+            size (:obj:`str`, optional): Размер обложки.
+
+        Returns:
+            :obj:`bytes`: Обложка в виде байтов.
+        """
+        return self.client.request.retrieve(self.get_og_image_url(size))
+
+    async def download_og_image_bytes_async(self, size: str = '200x200') -> bytes:
+        """Загрузка обложки и возврат в виде байтов.
+
+        Используйте это только когда нет self.cover!
+
+        Args:
+            size (:obj:`str`, optional): Размер обложки.
+
+        Returns:
+            :obj:`bytes`: Обложка в виде байтов.
+        """
+        return await self.client.request.retrieve(self.get_og_image_url(size))
+
+    def rename(self, name: str, *args, **kwargs) -> None:
+        """Сокращение для::
+
+        client.users_playlists_name(playlist.kind, name, *args, **kwargs)
+        """
         client, kind = self.client, self.kind
 
         self.__dict__.clear()
-        self.__dict__.update(client.users_playlists_name(kind, name).__dict__)
+        self.__dict__.update(client.users_playlists_name(kind, name, *args, **kwargs).__dict__)
 
-    async def rename_async(self, name: str) -> None:
+    async def rename_async(self, name: str, *args, **kwargs) -> None:
+        """Сокращение для::
+
+        client.users_playlists_name(playlist.kind, name, *args, **kwargs)
+        """
         client, kind = self.client, self.kind
 
         self.__dict__.clear()
-        self.__dict__.update((await client.users_playlists_name(kind, name)).__dict__)
+        self.__dict__.update((await client.users_playlists_name(kind, name, *args, **kwargs)).__dict__)
 
     def like(self, *args, **kwargs) -> bool:
         """Сокращение для::
@@ -275,26 +361,26 @@ class Playlist(YandexMusicObject):
 
         await client.users_playlists(playlist.kind, playlist.owner.id, *args, **kwargs).tracks
         """
-        return await self.client.users_playlists(self.kind, self.owner.uid, *args, **kwargs).tracks
+        return (await self.client.users_playlists(self.kind, self.owner.uid, *args, **kwargs)).tracks
 
-    def insert_track(self, track_id: int, album_id: int, *args, **kwargs) -> Optional['Playlist']:
+    def insert_track(self, track_id: int, album_id: int, **kwargs) -> Optional['Playlist']:
         """Сокращение для::
 
         client.users_playlists_insert_track(self.kind, track_id, album_id, user_id=self.owner.uid,
         revision=self.revision, *args, **kwargs)
         """
         return self.client.users_playlists_insert_track(
-            self.kind, track_id, album_id, user_id=self.owner.uid, revision=self.revision, *args, **kwargs
+            self.kind, track_id, album_id, user_id=self.owner.uid, revision=self.revision, **kwargs
         )
 
-    async def insert_track_async(self, track_id: int, album_id: int, *args, **kwargs) -> Optional['Playlist']:
+    async def insert_track_async(self, track_id: int, album_id: int, **kwargs) -> Optional['Playlist']:
         """Сокращение для::
 
         await client.users_playlists_insert_track(self.kind, track_id, album_id, user_id=self.owner.uid,
         revision=self.revision, *args, **kwargs)
         """
         return await self.client.users_playlists_insert_track(
-            self.kind, track_id, album_id, user_id=self.owner.uid, revision=self.revision, *args, **kwargs
+            self.kind, track_id, album_id, user_id=self.owner.uid, revision=self.revision, **kwargs
         )
 
     def delete_tracks(self, from_: int, to: int, *args, **kwargs) -> Optional['Playlist']:
@@ -315,14 +401,14 @@ class Playlist(YandexMusicObject):
             self.kind, from_, to, self.revision, self.owner.uid, *args, **kwargs
         )
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
         client.users_playlists_delete(self.kind, self.owner.uid)
         """
         return self.client.users_playlists_delete(self.kind, self.owner.uid, *args, **kwargs)
 
-    async def delete_async(self, *args, **kwargs):
+    async def delete_async(self, *args, **kwargs) -> bool:
         """Сокращение для::
 
         await client.users_playlists_delete(self.kind, self.owner.uid)
@@ -340,22 +426,24 @@ class Playlist(YandexMusicObject):
         Returns:
             :obj:`yandex_music.Playlist`: Плейлист.
         """
-        if not data:
+        if not cls.is_valid_model_data(data):
             return None
 
         data = super(Playlist, cls).de_json(data, client)
         from yandex_music import (
-            User,
-            MadeFor,
-            Cover,
-            PlayCounter,
-            TrackShort,
-            PlaylistAbsence,
             Artist,
-            TrackId,
-            Contest,
-            OpenGraphData,
             Brand,
+            Contest,
+            Cover,
+            CustomWave,
+            MadeFor,
+            OpenGraphData,
+            Pager,
+            PlayCounter,
+            PlaylistAbsence,
+            TrackId,
+            TrackShort,
+            User,
         )
 
         data['owner'] = User.de_json(data.get('owner'), client)
@@ -380,10 +468,13 @@ class Playlist(YandexMusicObject):
             data['playlist_absence'] = PlaylistAbsence.de_json(data.get('playlist_absense'), client)
             data.pop('playlist_absense')
 
+        data['custom_wave'] = CustomWave.de_json(data.get('custom_wave'), client)
+        data['pager'] = Pager.de_json(data.get('pager'), client)
+
         return cls(client=client, **data)
 
     @classmethod
-    def de_list(cls, data: dict, client: 'Client') -> List['Playlist']:
+    def de_list(cls, data: list, client: 'Client') -> List['Playlist']:
         """Десериализация списка объектов.
 
         Args:
@@ -393,7 +484,7 @@ class Playlist(YandexMusicObject):
         Returns:
             :obj:`list` из :obj:`yandex_music.Playlist`: Плейлисты.
         """
-        if not data:
+        if not cls.is_valid_model_data(data, array=True):
             return []
 
         return [cls.de_json(playlist, client) for playlist in data]
@@ -408,6 +499,10 @@ class Playlist(YandexMusicObject):
     getRecommendations = get_recommendations
     #: Псевдоним для :attr:`get_recommendations_async`
     getRecommendationsAsync = get_recommendations_async
+    #: Псевдоним для :attr:`get_animated_cover_url`
+    getAnimatedCoverUrl = get_animated_cover_url
+    #: Псевдоним для :attr:`get_og_image_url`
+    getOgImageUrl = get_og_image_url
     #: Псевдоним для :attr:`download_animated_cover`
     downloadAnimatedCover = download_animated_cover
     #: Псевдоним для :attr:`download_animated_cover_async`
@@ -416,6 +511,20 @@ class Playlist(YandexMusicObject):
     downloadOgImage = download_og_image
     #: Псевдоним для :attr:`download_og_image_async`
     downloadOgImageAsync = download_og_image_async
+    #: Псевдоним для :attr:`download_animated_cover_bytes`
+    downloadAnimatedCoverBytes = download_animated_cover_bytes
+    #: Псевдоним для :attr:`download_animated_cover_bytes_async`
+    downloadAnimatedCoverBytesAsync = download_animated_cover_bytes_async
+    #: Псевдоним для :attr:`download_og_image_bytes`
+    downloadOgImageBytes = download_og_image_bytes
+    #: Псевдоним для :attr:`download_og_image_bytes_async`
+    downloadOgImageBytesAsync = download_og_image_bytes_async
+    #: Псевдоним для :attr:`rename_async`
+    renameAsync = rename_async
+    #: Псевдоним для :attr:`like_async`
+    likeAsync = like_async
+    #: Псевдоним для :attr:`dislike_async`
+    dislikeAsync = dislike_async
     #: Псевдоним для :attr:`fetch_tracks`
     fetchTracks = fetch_tracks
     #: Псевдоним для :attr:`fetch_tracks_async`
@@ -428,11 +537,5 @@ class Playlist(YandexMusicObject):
     deleteTracks = delete_tracks
     #: Псевдоним для :attr:`delete_tracks_async`
     deleteTracksAsync = delete_tracks_async
-    #: Псевдоним для :attr:`rename_async`
-    renameAsync = rename_async
-    #: Псевдоним для :attr:`like_async`
-    likeAsync = like_async
-    #: Псевдоним для :attr:`dislike_async`
-    dislikeAsync = dislike_async
     #: Псевдоним для :attr:`delete_async`
     deleteAsync = delete_async
