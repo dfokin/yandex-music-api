@@ -151,7 +151,7 @@ class ClientAsync(YandexMusicObject):
         return self._request
 
     @log
-    async def init(self):
+    async def init(self, timeout: Union[int, float] = None):
         """Получение информацию об аккаунте использующихся в других запросах."""
         self.me = await self.account_status()
         return self

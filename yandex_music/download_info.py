@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, List
+from typing import TYPE_CHECKING, Optional, List, Union
 
 from hashlib import md5
 import xml.dom.minidom as minidom
@@ -71,7 +71,7 @@ class DownloadInfo(YandexMusicObject):
 
         return self.direct_link
 
-    async def get_direct_link_async(self) -> str:
+    async def get_direct_link_async(self, timeout: Union[int, float] = None) -> str:
         """Получение прямой ссылки на загрузку из XML ответа.
 
         Метод доступен только одну минуту с момента получения информации о загрузке, иначе 410 ошибка!
@@ -80,7 +80,7 @@ class DownloadInfo(YandexMusicObject):
             :obj:`str`: Прямая ссылка на загрузку трека.
 
         """
-        result = await self.client.request.retrieve(self.download_info_url)
+        result = await self.client.request.retrieve(self.download_info_url, timeout=timeout)
 
         self.direct_link = self.__build_direct_link(result)
 

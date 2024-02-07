@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, List, Iterator
+from typing import TYPE_CHECKING, Optional, List, Iterator, Union
 
 from yandex_music.utils import model
 from yandex_music import YandexMusicObject
@@ -48,13 +48,13 @@ class TracksList(YandexMusicObject):
         """
         return self.client.tracks(self.tracks_ids)
 
-    async def fetch_tracks_async(self) -> List['Track']:
+    async def fetch_tracks_async(self, timeout: Union[int, float] = None) -> List['Track']:
         """Получение полных версии треков.
 
         Returns:
             :obj:`list` из :obj:`yandex_music.Track`: Полная версия трека.
         """
-        return await self.client.tracks(self.tracks_ids)
+        return await self.client.tracks(self.tracks_ids, timeout=timeout)
 
     @classmethod
     def de_json(cls, data: dict, client: 'Client') -> Optional['TracksList']:

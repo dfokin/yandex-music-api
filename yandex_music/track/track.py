@@ -131,12 +131,12 @@ class Track(YandexMusicObject):
 
         return self.download_info
 
-    async def get_download_info_async(self, get_direct_links=False) -> List['DownloadInfo']:
+    async def get_download_info_async(self, get_direct_links=False, timeout: Union[int, float] = None) -> List['DownloadInfo']:
         """Сокращение для::
 
         await client.tracks_download_info(self.track_id, get_direct_links)
         """
-        self.download_info = await self.client.tracks_download_info(self.track_id, get_direct_links)
+        self.download_info = await self.client.tracks_download_info(self.track_id, get_direct_links, timeout=timeout)
 
         return self.download_info
 
